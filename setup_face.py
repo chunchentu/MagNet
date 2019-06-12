@@ -15,6 +15,7 @@ import numpy as np
 import os
 import gzip
 import urllib.request
+import scipy.io
 
 from keras.models import load_model
 
@@ -34,38 +35,43 @@ def extract_labels(filename, num_images):
         labels = np.frombuffer(buf, dtype=np.uint8)
     return (np.arange(10) == labels[:, None]).astype(np.float32)
 
-class MNIST:
+class FACE:
     def __init__(self):
-        if not os.path.exists("data"):
-            os.mkdir("data")
-            files = ["train-images-idx3-ubyte.gz",
-                     "t10k-images-idx3-ubyte.gz",
-                     "train-labels-idx1-ubyte.gz",
-                     "t10k-labels-idx1-ubyte.gz"]
-            for name in files:
-                urllib.request.urlretrieve('http://yann.lecun.com/exdb/mnist/' + name, "data/"+name)
 
-        train_data = extract_data("data/train-images-idx3-ubyte.gz", 60000)+0.5
-        train_labels = extract_labels("data/train-labels-idx1-ubyte.gz", 60000)
-        self.test_data = extract_data("data/t10k-images-idx3-ubyte.gz", 10000)+0.5
-        self.test_labels = extract_labels("data/t10k-labels-idx1-ubyte.gz", 10000)
+        d = scipy.io.loadmat("face_data.mat")
+
+        # train_data = extract_data("data/train-images-idx3-ubyte.gz", 60000)+0.5
+        # train_labels = extract_labels("data/train-labels-idx1-ubyte.gz", 60000)
+        # self.test_data = extract_data("data/t10k-images-idx3-ubyte.gz", 10000)+0.5
+        # self.test_labels = extract_labels("data/t10k-labels-idx1-ubyte.gz", 10000)
         
-        VALIDATION_SIZE = 5000
+        # VALIDATION_SIZE = 5000
         
-        self.validation_data = train_data[:VALIDATION_SIZE, :, :, :]
-        self.validation_labels = train_labels[:VALIDATION_SIZE]
-        self.train_data = train_data[VALIDATION_SIZE:, :, :, :]
-        self.train_labels = train_labels[VALIDATION_SIZE:]
+        # self.validation_data = train_data[:VALIDATION_SIZE, :, :, :]
+        # self.validation_labels = train_labels[:VALIDATION_SIZE]
+        # self.train_data = train_data[VALIDATION_SIZE:, :, :, :]
+        # self.train_labels = train_labels[VALIDATION_SIZE:]
+
+        self.train_data = d["true_train_x"]
+        self.train_labels = d["true_train_y"]
+        self.test_data = d["true_test_x"]
+        self.test_labels = d["true_test_y"]
+        self.validation_data = self.test_data
+        self.validation_labels = self.test_labels
+        self.train_adv = d["adv_train_x"]
+        self.test_adv = d["adv_test_x"]
+        self.train_data = np.concatenate((self.train_data, self.train_adv), axis=0)
+
 
     @staticmethod
     def print():
-        return "MNIST"
+        return "Face"
 
 
 class MNISTModel:
     def __init__(self, restore, session=None):
         self.num_channels = 1
-        self.image_size = 28
+        self.image_size = 32
         self.num_labels = 10
         self.model = load_model(restore)
 
